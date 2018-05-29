@@ -112,8 +112,6 @@ article_data <-
       article_combined(as.Date("2018-05-01"),
                        as.Date("2018-05-25")
                        )
-```
-```r
 head(article_data, 20)
 ```
 ```r
