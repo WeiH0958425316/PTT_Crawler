@@ -1165,7 +1165,7 @@ text_freq_keyword_month_trend <- function(data, search_keyword, cum=FALSE){
       if(length(search_keyword_t)>8){
             color_set <- rainbow(length(search_keyword_t))
       }else{
-            color_set <- RColorBrewer::brewer.pal(length(search_keyword_t),  "Set2")
+            color_set <- RColorBrewer::brewer.pal(max(length(search_keyword_t), 3),  "Set2")
       }
       data <- 
             data %>% 
@@ -1176,7 +1176,10 @@ text_freq_keyword_month_trend <- function(data, search_keyword, cum=FALSE){
             ungroup() %>% 
             spread(CHAR, FREQ, fill = 0) %>% 
             gather(CHAR, FREQ, -MONTH)
-      if(cum==TRUE){
+      if (nrow(data) == 0) {
+            stop("nrow(data) == 0")
+      }
+      if (cum==TRUE) {
             data <- 
                   data %>% 
                   arrange(CHAR, MONTH) %>% 
