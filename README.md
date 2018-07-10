@@ -40,7 +40,7 @@ result <- ptt_crawler_list(search_board = "Key_Mou_Pad",
 ## ...
 ```
 
-We can get the data.
+We get the data.
 
 ```r
 head(result$article_title, 4)
@@ -84,7 +84,7 @@ head(result$article_title, 4)
 <br>
 
 ## Data tidy
-We have the data that is ‘list’ for format. Now we must transform to ‘data.frame’. You can follow as below:
+We have the data that is a ‘list’ for format. Now, we must transform to ‘data.frame’. You can follow as below:
 
 ```r
 # fixed articles at the bottom of list.
