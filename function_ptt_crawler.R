@@ -937,10 +937,10 @@ article_combined <- function(data, search_date_start, search_date_end){
             ) %>% 
             unlist() %>%
             matrix(ncol=3, byrow=T) %>% 
-            tbl_df() %>% 
-            transmute(REAL_TEXT=gsub("(\\w)", "\\L\\1", V1, perl=TRUE), 
-                      PUSH_TIME=V2, 
-                      ARTICLE_ID=V3
+            data.frame() %>% 
+            transmute(REAL_TEXT=gsub("(\\w)", "\\L\\1", X1, perl=TRUE), 
+                      PUSH_TIME=X2, 
+                      ARTICLE_ID=X3
             ) %>% 
             filter(is.na(PUSH_TIME)|
                          as.Date(PUSH_TIME)%in%seq.Date(as.Date(search_date_start), as.Date(search_date_end), "day")
