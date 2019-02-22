@@ -31,7 +31,9 @@
 
 ####   抓取並直接下載至指定資料夾----
 ptt_crawler_download <- function(search_board, 
-                                 search_range = 10, 
+                                 search_range, 
+                                 search_range_start,
+                                 search_range_end,
                                  search_keyword = NA, 
                                  path, 
                                  time_break = c(10,  5), 
@@ -92,11 +94,25 @@ ptt_crawler_download <- function(search_board,
             substr(regexec("/index", .) %>% .[[1]] %>% .[1]+6
                    , regexec(".html", .) %>% .[[1]] %>% .[1]-1) %>%
             as.numeric() + 1
-      
       Sys.sleep(abs(rnorm(1) * time_break[1]))
-      
-      first_page <- last_page - search_range + 1
-      
+      if (!missing(search_range)) {
+            first_page <- last_page - search_range + 1
+      } else {
+            if (!missing(search_range_start) & !missing(search_range_end)) {
+                  if (last_page < search_range_end) {
+                       warning(paste0("'search_range_end' > the last page. Set 'search_range_end = last_page'."))  
+                        search_range_end <- last_page
+                  }
+                  first_page <- search_range_start
+                  last_page <- search_range_end
+            } else {
+                  warning(paste0("Miss arguments 'search_range', 'search_range_start', 'search_range_end'.",
+                                 "Default the last page."
+                                 )
+                          ) 
+                  first_page <- last_page
+            }
+      }
       if (showProgress == TRUE) {
             cat(paste0("PTT-", search_board, "'s Crawler\n", 
                        "Page from ", first_page, " to ", last_page
@@ -442,7 +458,9 @@ ptt_crawler_download <- function(search_board,
 ####   抓取彙整為list----
 
 ptt_crawler_list <- function(search_board, 
-                             search_range = 10, 
+                             search_range, 
+                             search_range_start,
+                             search_range_end,
                              search_keyword = NA, 
                              size_mb_limit = 1024, 
                              time_break = c(10, 5), 
@@ -496,10 +514,25 @@ ptt_crawler_list <- function(search_board,
             substr(regexec("/index", .) %>% .[[1]] %>% .[1] + 6
                    , regexec(".html", .) %>% .[[1]] %>% .[1] - 1) %>%
             as.numeric() + 1
-      
-      
-      first_page <- last_page - search_range + 1
-      
+      Sys.sleep(abs(rnorm(1) * time_break[1]))
+      if (!missing(search_range)) {
+            first_page <- last_page - search_range + 1
+      } else {
+            if (!missing(search_range_start) & !missing(search_range_end)) {
+                  if (last_page < search_range_end) {
+                       warning(paste0("'search_range_end' > the last page. Set 'search_range_end = last_page'."))  
+                        search_range_end <- last_page
+                  }
+                  first_page <- search_range_start
+                  last_page <- search_range_end
+            } else {
+                  warning(paste0("Miss arguments 'search_range', 'search_range_start', 'search_range_end'.",
+                                 "Default the last page."
+                                 )
+                          ) 
+                  first_page <- last_page
+            }
+      }
       if(showProgress == TRUE){
             cat(paste0("PTT-", search_board, "'s Crawler\n", 
                        "Page from ", first_page, " to ", last_page
