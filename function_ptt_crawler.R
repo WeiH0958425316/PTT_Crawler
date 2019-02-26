@@ -127,11 +127,11 @@ ptt_crawler_download <- function(search_board,
       ### 爬蟲主體: 頁面&文章代碼 - 紀錄文章代碼----
       
       total_article_title <- tbl_df(NULL)
-      error_list <- list()
+      page_error_list <- list()
       for (page_i in last_page : first_page) {
             page_time_1 <- Sys.time()
             
-            error_list[[length(error_list) + 1]] <- 
+            page_error_list[[length(page_error_list) + 1]] <- 
                   try({
                         if (missing(proxy)) {
                               page_html <- 
@@ -271,12 +271,13 @@ ptt_crawler_download <- function(search_board,
       
       ### 爬蟲主體: 文章內文----
       article_time_start <- Sys.time()
+      article_error_list <- list()
       for (total_article_title_i in nrow(total_article_title) : 1) {
             
             
             article_time_1 <- Sys.time()
             
-            error_list[[length(error_list) + 1]] <- 
+            article_error_list[[length(article_error_list) + 1]] <- 
                   try({
                         if (missing(proxy)) {
                               page_html <- 
@@ -547,11 +548,11 @@ ptt_crawler_list <- function(search_board,
       ### 爬蟲主體: 頁面&文章代碼 - 紀錄文章代碼----
       
       total_article_title <- tbl_df(NULL)
-      error_list <- list()
+      page_error_list <- list()
       for(page_i in last_page : first_page){
             page_time_1 <- Sys.time()
             
-            error_list[[length(error_list) + 1]] <- 
+            page_error_list[[length(page_error_list) + 1]] <- 
                   try({
                         if (missing(proxy)) {
                               page_html <- 
@@ -666,12 +667,12 @@ ptt_crawler_list <- function(search_board,
       
       ### 爬蟲主體: 文章內文----
       article_time_start <- Sys.time()
-      
+      article_error_list <- list()
       # list_i <- 3
       for(total_article_title_i in nrow(total_article_title) : 1){
             article_time_1 <- Sys.time()
             
-            error_list[[length(error_list) + 1]] <- 
+            article_error_list[[length(article_error_list) + 1]] <- 
                   try({
                         if (missing(proxy)) {
                               page_html <- 
@@ -841,7 +842,10 @@ ptt_crawler_list <- function(search_board,
       
       #### 資料回傳----  
       return(list(article_title = article_title, 
-                  error_list = error_list))
+                  page_error_list = page_error_list,
+                  article_error_list = article_error_list
+                  )
+             )
 }
 
 #測試
@@ -1006,37 +1010,68 @@ article_combined <- function (data, search_date_start, search_date_end) {
 
 # 段詞(鎖定關鍵字出現之文章)----
 
-article_cut <- function (data, text_cut = jiebaR::worker(), select_keyword_article) {
+article_cut <- function (data, text_cut = jiebaR::worker(), select_keyword_article, group, digit = TRUE) {
       require(tidyverse)
       require(jiebaR)
-      
+      if (missing(group)) {
+            data <- data %>% mutate(GROUP_COLUMN = "NOGROUP")
+      } else {
+            data <- data
+            names(data)[names(data) == group] <- "GROUP_COLUMN"
+      }
       if (missing(select_keyword_article)) {
             text_data <- 
                   data %>% 
-                  mutate(REAL_TEXT = gsub(paste0("[[:digit:]]|[[:punct:]]|", 
+                  mutate(REAL_TEXT = gsub(paste0("[[:punct:]]|", 
                                                paste0("～", 
                                                       gsub("", "|", "！＠＃＄％︿＆＊（）＿＋－＝｛｝［］【】？‵１２３４５６７８９"), 
                                                       "０")
                   ), 
                   " ", REAL_TEXT)
-                  ) %>% 
-                  group_by(PUSH_TIME) %>% 
+                  )
+            if (digit) {
+                  text_data <- 
+                        text_data %>%  
+                        mutate(REAL_TEXT = gsub("[[:digit:]]", " ", REAL_TEXT))
+            }
+            text_data <- 
+                  text_data %>% 
+                  group_by(GROUP_COLUMN, PUSH_TIME) %>% 
                   summarise(REAL_TEXT = gsub(" {2, }", " ", paste0(REAL_TEXT, collapse = " "))) %>% 
                   ungroup()
             
             tt <- segment(text_data$REAL_TEXT, text_cut)
             names(tt) <- paste0("DATE", text_data$PUSH_TIME)
-            text_data <- tt ; rm(tt)
+            
+            if (missing(group)) {
+                  text_data <- tt ; rm(tt)
+            } else {
+                  tt2 <- list()
+                  group_list <- unique(text_data$GROUP_COLUMN)
+                  for (i in seq_along(group_list)) {
+                        tt2[[i]] <- tt[which(text_data$GROUP_COLUMN == group_list[i])]
+                  }
+                  names(tt2) <- group_list
+                  text_data <- tt2
+                  rm(tt, tt2)
+            }
       } else {
-            text_data <- 
+             text_data <- 
                   data %>% 
-                  mutate(REAL_TEXT = gsub(paste0("[[:digit:]]|[[:punct:]]|", 
+                  mutate(REAL_TEXT = gsub(paste0("[[:punct:]]|", 
                                                paste0("～", 
                                                       gsub("", "|", "！＠＃＄％︿＆＊（）＿＋－＝｛｝［］【】？‵１２３４５６７８９"), 
                                                       "０")
                   ), 
                   " ", REAL_TEXT)
-                  ) %>% 
+                  )
+            if (digit) {
+                  text_data <- 
+                        text_data %>%  
+                        mutate(REAL_TEXT = gsub("[[:digit:]]", " ", REAL_TEXT))
+            }
+            text_data <- 
+                  text_data %>% 
                   group_by(ARTICLE_ID) %>% 
                   summarise(REAL_TEXT = gsub(" {2, }", " ", paste0(REAL_TEXT, collapse = " "))) %>% 
                   ungroup()
@@ -1051,23 +1086,42 @@ article_cut <- function (data, text_cut = jiebaR::worker(), select_keyword_artic
                         tt <- c(tt, i)
                   }
             }
+            text_data <- data %>% filter(ARTICLE_ID %in% tt)
             text_data <- 
                   data %>% 
-                  filter(ARTICLE_ID %in% tt) %>% 
-                  mutate(REAL_TEXT = gsub(paste0("[[:digit:]]|[[:punct:]]|", 
-                                               paste0("～", 
-                                                      gsub("", "|", "！＠＃＄％︿＆＊（）＿＋－＝｛｝［］【】？‵１２３４５６７８９"), 
-                                                      "０")
+                  mutate(REAL_TEXT = gsub(paste0("[[:punct:]]|", 
+                                                 paste0("～", 
+                                                        gsub("", "|", "！＠＃＄％︿＆＊（）＿＋－＝｛｝［］【】？‵１２３４５６７８９"), 
+                                                        "０")
                   ), 
                   " ", REAL_TEXT)
-                  ) %>% 
-                  group_by(PUSH_TIME) %>% 
+                  )
+            if (digit) {
+                  text_data <- 
+                        text_data %>%  
+                        mutate(REAL_TEXT = gsub("[[:digit:]]", " ", REAL_TEXT))
+            }
+            text_data <- 
+                  text_data %>% 
+                  group_by(GROUP_COLUMN, PUSH_TIME) %>% 
                   summarise(REAL_TEXT = gsub(" {2, }", " ", paste0(REAL_TEXT, collapse = " "))) %>% 
                   ungroup()
             
             tt <- segment(text_data$REAL_TEXT, text_cut)
             names(tt) <- paste0("DATE", text_data$PUSH_TIME)
-            text_data <- tt ; rm(tt)
+            
+            if (missing(group)) {
+                  text_data <- tt ; rm(tt)
+            } else {
+                  tt2 <- list()
+                  group_list <- unique(text_data$GROUP_COLUMN)
+                  for (i in seq_along(group_list)) {
+                        tt2[[i]] <- tt[which(text_data$GROUP_COLUMN == group_list[i])]
+                  }
+                  names(tt2) <- group_list
+                  text_data <- tt2
+                  rm(tt, tt2)
+            }
       }
       return(text_data)
 }
